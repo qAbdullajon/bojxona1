@@ -59,7 +59,6 @@ export const ProductDetails = ({ product }) => {
     event_product,
     statusProduct,
     sale_product_quantity,
-    description,
   } = product;
 
   const handleEditDesc = async () => {
@@ -221,29 +220,27 @@ export const ProductDetails = ({ product }) => {
           value={event_product?.event_number}
           className="mt-6"
         />
-        {description && (
-          <div className="bg-gray-100 p-4 rounded-md">
-            <div className="flex items-center justify-between">
-              <p className="text-2xl">Mahsulot tarifi</p>
-              <button
-                onClick={handleEditDesc}
-                className="w-10 h-10 border cursor-pointer border-gray-400 rounded-full flex items-center justify-center"
-              >
-                {isEdit ? <Check size={24} /> : <Pencil size={20} />}
-              </button>
-            </div>
-
-            {isEdit ? (
-              <textarea
-                className="border mt-2 border-gray-300 w-full outline-none p-2"
-                onChange={(e) => setUpdateDesc(e.target.value)}
-                value={updateDesc}
-              />
-            ) : (
-              <p>{desc || "Tarif mavjud emas"}</p>
-            )}
+        <div className="bg-gray-100 p-4 rounded-md">
+          <div className="flex items-center justify-between">
+            <p className="text-2xl">Mahsulot tarifi</p>
+            <button
+              onClick={handleEditDesc}
+              className="w-10 h-10 border cursor-pointer border-gray-400 rounded-full flex items-center justify-center"
+            >
+              {isEdit ? <Check size={24} /> : <Pencil size={20} />}
+            </button>
           </div>
-        )}
+
+          {isEdit ? (
+            <textarea
+              className="border mt-2 border-gray-300 w-full outline-none p-2"
+              onChange={(e) => setUpdateDesc(e.target.value)}
+              value={updateDesc}
+            />
+          ) : (
+            <p>{desc || "Tarif mavjud emas"}</p>
+          )}
+        </div>
       </div>
     </div>
   );

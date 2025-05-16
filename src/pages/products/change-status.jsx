@@ -348,7 +348,6 @@ export default function ChangeStatus({ product, status, onClose, eventId }) {
   const handleSubmit = useCallback(
     async (e) => {
       e.preventDefault();
-
       if (!selectedMib || !selectedSud || !fileData) {
         notification(
           !selectedMib
@@ -359,12 +358,6 @@ export default function ChangeStatus({ product, status, onClose, eventId }) {
         );
         return;
       }
-
-      // if (status === "ed207621-3867-4530-8886-0fa434dedc19" && !videoFile) {
-      //   notification("Videoni kiriting");
-      //   return;
-      // }
-
       try {
         const productIds = items.length > 0 ? items : [product.id];
         const endpointMap = {
@@ -374,7 +367,8 @@ export default function ChangeStatus({ product, status, onClose, eventId }) {
         };
 
         const endpoint = endpointMap[status] || endpointMap.default;
-
+        
+        // if(status ===)
         for (const productId of productIds) {
           const data = prepareFormData(productId, e.target);
           await $api.post(endpoint, data);
