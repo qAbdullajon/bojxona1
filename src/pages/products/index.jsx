@@ -7,7 +7,7 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
-import { useProductStore } from "../../hooks/useModalState";
+import { useEventStore, useProductStore } from "../../hooks/useModalState";
 import { usePathStore } from "../../hooks/usePathStore";
 import $api from "../../http/api";
 import { Box, CircularProgress, Typography } from "@mui/material";
@@ -22,6 +22,9 @@ export default function Products() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get("search");
+  const { toggleIsAddModal, setText, isOnSubmit, setIsOnSubmit, type, setType } =
+    useEventStore();
+  const [productId, setProductId] = useState(null);
 
   const [pagination, setPagination] = useState({
     page: 0,
@@ -33,23 +36,33 @@ export default function Products() {
 
   const columns = [
     { field: "id", headerName: "№" },
-    { field: "event", headerName: "Holat raqami" },
+    { field: "event", headerName: "Holat raqami", width: 100 },
     { field: "name", headerName: "Nomi" },
     { field: "quantity", headerName: "Soni" },
     { field: "price", headerName: "Narxi" },
     { field: "total_price", headerName: "Umumiy narx" },
-    { field: "status", headerName: "Status" },
+    { field: "status", headerName: "Status", width: 100 },
     { field: "type", headerName: "Turi" },
-    { field: "description", headerName: "Mahsulot tarifis" },
     { field: "actions", headerName: "Amallar" },
   ];
-  const handleDelete = async(id) => {
-    let result = confirm("Malumotni rostan o'chirmoqchimisiz?")
-    if (result) {
-      await $api.delete(`products/delete/${id}`)
-      setData(data.filter((item) => item.id !== id))
+  const handleDelete = async (id) => {
+    setText("Mahsulotni rostan o'chirmoqchimisiz?");
+    toggleIsAddModal();
+    setType("product-detail")
+    setProductId(id)
+  };
+  useEffect(() => {
+    if (isOnSubmit && type === "product-detail") {
+      const productDeleted = async () => {
+        const res = await $api.delete(`products/delete/${productId}`);
+        if (res.status === 200) {
+          setData(data.filter((item) => item.id !== productId));
+          setIsOnSubmit(false);
+        }
+      };
+      productDeleted();
     }
-  }
+  }, [isOnSubmit]);
   useEffect(() => {
     const getAllProducts = async () => {
       try {
@@ -66,7 +79,7 @@ export default function Products() {
           }
         );
         console.log(res);
-        
+
         setData(searchQuery ? res.data.products : res.data.data);
         setTotal(res.data.total);
       } catch (error) {
@@ -91,7 +104,7 @@ export default function Products() {
         {row.statusProduct?.product_status}
       </span>
     ),
-    event: '#' + row.event_product?.event_number || "Noma'lum",
+    event: "#" + row.event_product?.event_number || "Noma'lum",
     type: row.type_product?.product_type || "Noma'lum",
     actions: (
       <div className="flex items-center gap-2">
@@ -147,16 +160,16 @@ export default function Products() {
         </button>
       </div>
 
-
       {/* NAVBAR */}
       <div className="flex gap-4 mb-6">
         <NavLink
           to="/maxsulotlar"
           end
           className={({ isActive }) =>
-            `px-4 py-2 rounded-md text-sm font-medium transition duration-200 ${isActive
-              ? "bg-[#249B73] text-white shadow"
-              : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+            `px-4 py-2 rounded-md text-sm font-medium transition duration-200 ${
+              isActive
+                ? "bg-[#249B73] text-white shadow"
+                : "bg-gray-100 text-gray-800 hover:bg-gray-200"
             }`
           }
         >
@@ -165,9 +178,10 @@ export default function Products() {
         <NavLink
           to="/maxsulotlar/panding"
           className={({ isActive }) =>
-            `px-4 py-2 rounded-md text-sm font-medium transition duration-200 ${isActive
-              ? "bg-[#249B73] text-white shadow"
-              : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+            `px-4 py-2 rounded-md text-sm font-medium transition duration-200 ${
+              isActive
+                ? "bg-[#249B73] text-white shadow"
+                : "bg-gray-100 text-gray-800 hover:bg-gray-200"
             }`
           }
         >

@@ -34,7 +34,7 @@ const style = {
 };
 
 export default function EventsModal() {
-  const { open, onClose, createData, editData, updateState, toggleIsAddModal } =
+  const { open, onClose, createData, editData, updateState, toggleIsAddModal, setText, setType } =
     useEventStore();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -293,13 +293,14 @@ export default function EventsModal() {
         setLoading(false);
       }
     } else {
-      // Yaratish
       try {
         const res = await $api.post(`/events/create`, newData);
         if (res.status === 201) {
           onClose();
           createData({ ...res.data.data, productsCount: 0 });
           notification("Muvaffaqiyatli yaratildi", "success");
+          setType("create-product")
+          setText("Mahsulot qo'shmoqchimisiz?")
           toggleIsAddModal();
         }
         resetForm();

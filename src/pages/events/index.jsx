@@ -15,27 +15,40 @@ import { notification } from "../../components/notification";
 
 export default function Events() {
   const navigate = useNavigate();
-  const { onOpen, data, pageTotal, setData, setTotal, setEditData } =
-    useEventStore();
+  const {
+    onOpen,
+    data,
+    pageTotal,
+    setData,
+    setTotal,
+    setEditData,
+    type,
+    setType,
+    toggleIsAddModal,
+    setText,
+    isOnSubmit,
+  } = useEventStore();
   const { setName } = usePathStore();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [loading, setLoading] = useState(true); 
+  const [loading, setLoading] = useState(true);
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get("search");
+  const [eventId, setEventId] = useState(null);
 
   useEffect(() => {
     const fetchData = async (page = 1, limit = 10) => {
       setLoading(true);
       try {
         const res = await $api.get(
-          `/events/${searchQuery ? "search" : "all"
+          `/events/${
+            searchQuery ? "search" : "all"
           }?page=${page}&limit=${limit}&search=${searchQuery || ""}`
         );
         setData(res.data.events || []);
         setTotal(res.data.total);
       } catch (error) {
-        notification(error.response?.data?.message)
+        notification(error.response?.data?.message);
       } finally {
         setLoading(false);
       }
@@ -62,7 +75,9 @@ export default function Events() {
         {item.productStatuses?.map((status) => (
           <span
             key={status}
-            className={`ml-2 text-xs font-medium px-2 py-0.5 rounded-full ${getStatusStyle(status)}`}
+            className={`ml-2 text-xs font-medium px-2 py-0.5 rounded-full ${getStatusStyle(
+              status
+            )}`}
           >
             {status}
           </span>
@@ -79,15 +94,31 @@ export default function Events() {
   };
 
   const handleDelete = async (id) => {
-    // onOpen();
-    let result = confirm("Malumotni rostan o'chirmoqchimisiz?");
-    if (result) {
-      await $api.delete(`events/delete/${id}`);
-      setData(data.filter((item) => item.id !== id));
-    }
-    // setEditData(row);
+    setText("Yuk xatini o'chirmoqchimisiz?");
+    setEventId(id);
+    setType("event-delete");
+    toggleIsAddModal();
   };
 
+  useEffect(() => {
+    console.log(type);
+    console.log(eventId);
+    
+    if (type === "event-delete" && eventId !== null) {
+      const eventDelete = async () => {
+        try {
+          const res = await $api.delete(`events/delete/${eventId}`);
+          console.log(res);
+          
+          setData(data.filter((item) => item.id !== eventId));
+          setEventId(null);
+        } catch (error) {
+          notification(error?.response?.data?.message);
+        }
+      };
+      eventDelete();
+    }
+  }, [isOnSubmit]);
   const nextButton = (row) => {
     setName(row.name);
     navigate(`/holatlar/${row.id}`);

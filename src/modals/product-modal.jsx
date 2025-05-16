@@ -32,7 +32,7 @@ const style = {
 
 export default function ProductModal() {
   const { open, onClose } = useProductStore();
-  const { toggleIsAddModal } = useEventStore();
+  const { toggleIsAddModal, setType, setText } = useEventStore();
   // States for warehouses
   const [warehouseSearch, setWarehouseSearch] = useState("");
   const [selectedWarehouse, setSelectedWarehouse] = useState(null);
@@ -322,6 +322,8 @@ export default function ProductModal() {
         handleClose();
         notification("Muvofaqiyatli qo'shildi", "success");
         toggleIsAddModal();
+        setType("create-product")
+        setText("Yana mahsulot qo'shmoqchimisiz?")
       }
     } catch (error) {
       notification(error?.response?.data?.message);

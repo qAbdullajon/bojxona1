@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { formatDate } from "../../utils/dateChecker";
 import { useState } from "react";
-import $api from "../../http/api";
+// import $api from "../../http/api";
 import { notification } from "../../components/notification";
 import { format } from "date-fns";
 
@@ -30,23 +30,23 @@ export const ImagesSection = ({ product, handleToggleModal }) => {
     handleToggleModal();
   };
 
-  const handleFileChange = async (e) => {
-    const files = Array.from(e.target.files); // Bir nechta faylni olish
-    const formData = new FormData();
-    // formData.append("name", product.event_product.name);
-    // formData.append("event_number", product.event_product.event_number);
-    files.forEach((file) => formData.append("event_images", file)); // Fayllarni formData-ga qo'shish
+  // const handleFileChange = async (e) => {
+  //   const files = Array.from(e.target.files); // Bir nechta faylni olish
+  //   const formData = new FormData();
+  //   // formData.append("name", product.event_product.name);
+  //   // formData.append("event_number", product.event_product.event_number);
+  //   files.forEach((file) => formData.append("event_images", file)); // Fayllarni formData-ga qo'shish
 
-    try {
-      const res = await $api.patch(
-        `/events/update/${product.event_product.id}`,
-        formData
-      );
-    } catch (error) {
-      notification(error.response?.data?.message);
-    }
-    setShowUploadModal(false);
-  };
+  //   try {
+  //     const res = await $api.patch(
+  //       `/events/update/${product.event_product.id}`,
+  //       formData
+  //     );
+  //   } catch (error) {
+  //     notification(error.response?.data?.message);
+  //   }
+  //   setShowUploadModal(false);
+  // };
 
   const handleDownload = async (url, filename) => {
     try {
@@ -137,9 +137,12 @@ export const ImagesSection = ({ product, handleToggleModal }) => {
 
         {product.event_product?.event_file &&
           product.event_product?.event_file.map((item) => (
-            <div key={item} className="flex items-center gap-3 text-xl px-5 py-2 rounded-md w-full justify-between">
+            <div
+              key={item}
+              className="flex items-center gap-3 text-xl px-5 py-2 rounded-md w-full justify-between"
+            >
               <div>
-                <span>Yuk xati fayli</span>
+                <span>Yuk xati hujjati</span>
               </div>
               <button
                 onClick={() =>
@@ -163,7 +166,7 @@ export const ImagesSection = ({ product, handleToggleModal }) => {
               className="flex items-center gap-3 text-xl px-5 py-2 rounded-md w-full justify-between"
             >
               <div>
-                <span>Sud hujjati</span>
+                <span>Sud qarori</span>
                 <span className="text-sm px-5">
                   {format(item.sud_date, "yyyy-MM-dd")}
                 </span>
@@ -192,7 +195,36 @@ export const ImagesSection = ({ product, handleToggleModal }) => {
               className="flex items-center gap-3 text-xl px-5 py-2 rounded-md w-full justify-between"
             >
               <div>
-                <span>Sud hujjati</span>
+                <span>Sud qarori</span>
+                <span className="text-sm pl-5">
+                  {format(item.sud_date, "yyyy-MM-dd")}
+                </span>
+              </div>
+              <button
+                onClick={() =>
+                  handleDownload(
+                    `${import.meta.env.VITE_BASE_URL}/uploads/${
+                      item.document_img[0]
+                    }`,
+                    getFilenameFromUrl(item.document_img[0])
+                  )
+                }
+                className="cursor-pointer w-10 h-10 flex items-center justify-center bg-gray-200 rounded-md"
+              >
+                <Download />
+              </button>
+            </div>
+          ))}
+
+        {Array.isArray(product.destroyed_product) &&
+          product.destroyed_product.length > 0 &&
+          product.destroyed_product.map((item, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-3 text-xl px-5 py-2 rounded-md w-full justify-between"
+            >
+              <div>
+                <span>Sud qarori</span>
                 <span className="text-sm pl-5">
                   {format(item.sud_date, "yyyy-MM-dd")}
                 </span>
@@ -251,13 +283,13 @@ export const ImagesSection = ({ product, handleToggleModal }) => {
               <p className="mb-4">Rasmlarni shu yerga sudrab keling yoki</p>
 
               <label className="inline-block px-4 py-2 bg-[#249B73] text-white rounded-lg hover:bg-[#1d7d5d] transition-colors cursor-pointer">
-                <input
+                {/* <input
                   type="file"
                   className="hidden"
                   multiple
                   accept="image/*"
                   onChange={handleFileChange}
-                />
+                /> */}
                 Faylni tanlash
               </label>
               <p className="text-xs text-gray-500 mt-3">

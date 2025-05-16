@@ -2,15 +2,20 @@ import { create } from "zustand";
 
 export const useEventStore = create((set) => ({
   open: false,
+  text: null,
   data: [],
-  isAddMadal: false,
+  isAddModal: false,
   pageTotal: 0,
+  type: null,
+  setType: (type) => set({ type }),
   editData: null,
+  isOnSubmit: false,
+  setIsOnSubmit: (bool) => set({ isOnSubmit: bool }),
+  setText: (lorem) => set({ text: lorem }),
   toggleIsAddModal: () =>
     set((state) => ({
-      isAddMadal: !state.isAddMadal,
+      isAddModal: !state.isAddModal,
     })),
-
   setEditData: (data) => set(() => ({ editData: data })),
   updateState: (new_data) =>
     set((store) => ({
@@ -41,6 +46,8 @@ export const useWarehouseStore = create((set) => ({
   data: [],
   editData: null,
   total: 0,
+  chandeStatusData: [],
+  setChangeStatusData: (data) => set({ chandeStatusData: data }),
   onOpen: () => set({ open: true }),
   onClose: () => set({ open: false }),
   setData: (all_data) => set({ data: [...all_data] }),

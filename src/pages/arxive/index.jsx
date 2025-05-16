@@ -79,7 +79,7 @@ export default function Arxive() {
     ...row,
     id: i + 1 + pagination.page * pagination.rowsPerPage,
     name: row.name || "Noma’lum",
-    event_number: "#" + `${row.event_product.event_number}` || "Noma’lum",
+    event_number: "#" + `${row.event_product?.event_number}` || "Noma’lum",
     mib_region:
       row.document_product[row.document_product.length - 1]?.mib_document
         ?.name ||

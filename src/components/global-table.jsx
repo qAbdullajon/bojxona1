@@ -34,6 +34,7 @@ export default function GlobalTable({
                   color: "#7783c5",
                   borderColor: "#f5efee",
                   padding: "10px 0",
+                  width: column?.width, 
                 }}
                 key={column.field}
               >

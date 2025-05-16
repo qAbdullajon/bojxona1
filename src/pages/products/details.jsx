@@ -68,8 +68,8 @@ export const ProductDetails = ({ product }) => {
       if (conf) {
         try {
           const res = await $api.patch(`/products/update/${product.id}`, {
-            description: updateDesc
-          }); 
+            description: updateDesc,
+          });
           if (res.status === 200) {
             setIsEdit(false);
             setDesc(updateDesc);
@@ -96,7 +96,7 @@ export const ProductDetails = ({ product }) => {
                   {name}
                   {statusProduct && (
                     <span
-                      className={`ml-2 text-xs font-medium px-2 py-0.5 rounded-full ${getStatusStyle(
+                      className={`ml-2 text-xs font-medium px-2 min-w-[80px] py-0.5 rounded-full ${getStatusStyle(
                         statusProduct.product_status
                       )}`}
                     >
@@ -110,10 +110,12 @@ export const ProductDetails = ({ product }) => {
               title="Miqdori"
               value={`${quantity || 0} ${unit || ""}`}
             />
-            <InfoCard
-              title={`Har 1${unit} narxi`}
-              value={<PriceDisplay value={price} />}
-            />
+            {price != "0.00" && (
+              <InfoCard
+                title={`Har 1 ${unit} narxi`}
+                value={<PriceDisplay value={price} />}
+              />
+            )}
             <InfoCard
               title="Amaldagi mahsulotlar"
               value={`${active_quantity || 0} ${unit || ""}`}
@@ -144,14 +146,18 @@ export const ProductDetails = ({ product }) => {
               icon={Calendar}
               iconColor="text-red-500"
             />
-            <InfoCard
-              title="Miqdorning umumiy narxi"
-              value={<PriceDisplay value={total_price} />}
-            />
-            <InfoCard
-              title="Amaldagi mahsulotlarning umumiy narxi"
-              value={<PriceDisplay value={active_total_price} />}
-            />
+            {price != "0.00" && (
+              <InfoCard
+                title="Miqdorning umumiy narxi"
+                value={<PriceDisplay value={total_price} />}
+              />
+            )}
+            {price != "0.00" && (
+              <InfoCard
+                title="Amaldagi mahsulotlarning umumiy narxi"
+                value={<PriceDisplay value={active_total_price} />}
+              />
+            )}
           </div>
         </div>
 

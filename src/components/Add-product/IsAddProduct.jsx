@@ -16,20 +16,29 @@ const style = {
 };
 
 export default function IsAddProduct() {
-  const { isAddMadal, toggleIsAddModal } = useEventStore();
+  const { isAddModal, toggleIsAddModal, text, setIsOnSubmit, type } =
+    useEventStore();
   const { onOpen } = useProductStore();
   const navigate = useNavigate();
 
   const handleClick = () => {
-    navigate(`/maxsulotlar`);
-    onOpen();
-    toggleIsAddModal()
+    if (!isAddModal) {
+      onOpen();
+    }
+    if (type === "create-product") {
+      navigate("/maxsulotlar");
+      onOpen()
+    }
+    toggleIsAddModal();
+    setIsOnSubmit((prev) => !prev);
+    console.log(isAddModal);
+    
   };
   return (
-    <Modal open={isAddMadal} onClose={toggleIsAddModal}>
+    <Modal open={isAddModal} onClose={toggleIsAddModal}>
       <Box sx={style}>
         <div className="flex items-center justify-between pb-8">
-          <p className="text-xl uppercase">Mahsulot qo'shmoqchimisiz?</p>
+          <p className="text-xl uppercase">{text}</p>
           <button
             onClick={toggleIsAddModal}
             className="w-8 h-8 hover:bg-[#f4f1f1] cursor-pointer flex items-center justify-center"
