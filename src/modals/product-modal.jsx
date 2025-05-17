@@ -31,7 +31,7 @@ const style = {
 };
 
 export default function ProductModal() {
-  const { open, onClose } = useProductStore();
+  const { open, onClose, editData } = useProductStore();
   const { toggleIsAddModal, setType, setText } = useEventStore();
   // States for warehouses
   const [warehouseSearch, setWarehouseSearch] = useState("");
@@ -156,7 +156,6 @@ export default function ProductModal() {
         params: { search: childTypeSearch, page: childTypePage, limit: 10 },
       });
       console.log(res);
-      
 
       if (res.status === 200) {
         if (childTypePage === 1) {
@@ -170,7 +169,6 @@ export default function ProductModal() {
       return notification(
         error.response?.data?.message || "Child turlarni yuklashda xatolik"
       );
-      
     } finally {
       setChildTypeLoading(false);
     }
@@ -250,6 +248,7 @@ export default function ProductModal() {
   }, [open]);
   const units = [
     "dona",
+    "tonna",
     "kg",
     "gramm",
     "litr",
@@ -268,9 +267,22 @@ export default function ProductModal() {
     quantity: "",
     price: "",
     unit: "",
-    given_count: "",
     description: "",
   });
+  console.log(editData);
+  
+  useEffect(() => {
+    if (editData) {
+      setFormData({
+        name: editData?.name || "",
+        quantity: editData?.quantity || "",
+        price: editData?.price === "0.00" ? '0' : editData?.price || "",
+        unit: editData?.unit || "",
+        description: editData.description || "",
+      });
+    }
+  }, [editData]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -285,7 +297,6 @@ export default function ProductModal() {
       quantity: "",
       price: "",
       unit: "",
-      given_count: "",
       description: "",
     });
   };
@@ -315,19 +326,32 @@ export default function ProductModal() {
       typeId: selectedType,
       childTypeId: selectedChildType,
     };
-
-    try {
-      const res = await $api.post("/products/create", completeData);
-      if (res.status === 201) {
-        handleClose();
-        notification("Muvofaqiyatli qo'shildi", "success");
-        toggleIsAddModal();
-        setType("create-product")
-        setText("Yana mahsulot qo'shmoqchimisiz?")
+    if(!editData?.id) {
+      try {
+        const res = await $api.post("/products/create", completeData);
+        if (res.status === 201) {
+          handleClose();
+          notification("Muvofaqiyatli qo'shildi", "success");
+          toggleIsAddModal();
+          setType("create-product");
+          setText("Yana mahsulot qo'shmoqchimisiz?");
+        }
+      } catch (error) {
+        notification(error?.response?.data?.message);
+        return;
       }
-    } catch (error) {
-      notification(error?.response?.data?.message);
-      return;
+    }else {
+      try {
+        const res = await $api.patch(`/products/update/${editData.id}`, completeData);
+        if (res.status === 200) {
+          handleClose();
+          notification("Muvofaqiyatli o'zgardi", "success");
+          // toggleIsAddModal();
+        }
+      } catch (error) {
+        notification(error?.response?.data?.message);
+        return;
+      }
     }
   };
 
@@ -530,7 +554,6 @@ export default function ProductModal() {
               size="small"
               required
             />
-
             {/* Quantity */}
             <TextField
               name="quantity"

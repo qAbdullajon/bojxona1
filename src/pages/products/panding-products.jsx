@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import GlobalTable from "../../components/global-table";
 import $api from "../../http/api";
 import { format } from "date-fns";
-import { ArrowRightFromLine, Check, CircleCheck } from "lucide-react";
+import { ArrowRightFromLine, Check, CircleCheck, Pencil } from "lucide-react";
 import NoData from "../../assets/no-data.png";
 import { Box, Dialog, Typography, Checkbox } from "@mui/material";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -10,7 +10,7 @@ import { useProductStore } from "../../hooks/useModalState";
 import { notification } from "../../components/notification";
 
 export default function PandingProducts() {
-  const { createData } = useProductStore();
+  const { createData, setEditData, onOpen: openModal } = useProductStore();
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
   const [searchParams] = useSearchParams();
@@ -157,6 +157,11 @@ export default function PandingProducts() {
     createData({ ...row, statusProduct: { product_status: "Saqlovda" } });
   };
 
+  const editData = (row) => {
+    setEditData(row)
+    openModal()
+  }
+
   const formattedRows = data.map((row, index) => ({
     ...row,
     id: index + 1,
@@ -174,6 +179,12 @@ export default function PandingProducts() {
           className="border border-gray-500 rounded-full p-1 cursor-pointer"
         >
           <Check size={17} />
+        </button>
+         <button
+          onClick={() => editData(row)}
+          className="border border-gray-500 rounded-full p-1 cursor-pointer"
+        >
+          <Pencil size={17} />
         </button>
         <button
           className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-400 cursor-pointer"
@@ -209,7 +220,7 @@ export default function PandingProducts() {
           <span>Tanlanganlar: {selectedProducts.length}</span>
           <button
             onClick={() => setBulkConfirmOpen(true)}
-            className="bg-green-500 text-white px-4 py-2 rounded"
+            className="bg-[#249B73] text-white px-4 py-2 rounded"
           >
             Tasdiqlash ({selectedProducts.length})
           </button>

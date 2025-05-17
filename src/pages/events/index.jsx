@@ -45,6 +45,8 @@ export default function Events() {
             searchQuery ? "search" : "all"
           }?page=${page}&limit=${limit}&search=${searchQuery || ""}`
         );
+        console.log(res);
+        
         setData(res.data.events || []);
         setTotal(res.data.total);
       } catch (error) {
@@ -62,6 +64,7 @@ export default function Events() {
     { field: "event_number", headerName: "Yuk xati raqami" },
     { field: "date", headerName: "Yuk xati sanasi" },
     { field: "productsCount", headerName: "Maxsulot soni" },
+    { field: "shipperName", headerName: "Yetkazib beruvchi" },
     { field: "status", headerName: "Status" },
     { field: "actions", headerName: "Taxrirlash" },
   ];
@@ -70,6 +73,7 @@ export default function Events() {
     id: item.id,
     index: page * rowsPerPage + i + 1,
     event_number: item.event_number,
+    shipperName: item.shipperName,
     status: (
       <div className="flex flex-wrap gap-1">
         {item.productStatuses?.map((status) => (

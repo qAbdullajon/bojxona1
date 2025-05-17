@@ -77,6 +77,8 @@ export const useProductStore = create((set) => ({
   data: [],
   total: 0,
   chandeStatusData: null,
+  editData: null,
+  setEditData: (obj) => set({ editData: obj }),
   setChangeStatusData: (data) => set({ chandeStatusData: data }),
   onClose: () => set({ open: false }),
   onOpen: () => set({ open: true }),
