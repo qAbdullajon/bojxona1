@@ -11,6 +11,7 @@ import ImageGallery from "../../components/ImageGallery";
 import { notification } from "../../components/notification";
 import { useCheckedStore } from "../../hooks/useCheckedStore";
 import ChangeStatus from "../products/change-status";
+import { useProductStore } from "../../hooks/useModalState";
 
 export default function EventDetail() {
   const [loading, setLoading] = useState(false);
@@ -33,6 +34,23 @@ export default function EventDetail() {
   const [description, setDescription] = useState("");
   const [updateDesc, setUpdateDesc] = useState("");
   const [isEdit, setIsEdit] = useState(false);
+  const { chandeStatusData, setChangeStatusData } = useProductStore();
+  const [prices, setPrices] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pricesSubmitted, setPricesSubmitted] = useState(false);
+
+  // Barcha tanlangan mahsulotlar uchun narxlar kiritilganligini tekshirish
+  const allPricesEntered = () => {
+    return items.every((itemId) => {
+      const price = prices[itemId];
+      return (
+        price !== undefined &&
+        price !== "" &&
+        !isNaN(price) &&
+        Number(price) > 0
+      );
+    });
+  };
 
   const handleSelectAll = (event) => {
     if (event.target.checked) {
@@ -41,6 +59,18 @@ export default function EventDetail() {
       clearItems();
     }
   };
+
+  // Narxlarni o'zgartirish va faqat raqamlarga ruxsat berish
+  const handlePriceChange = (productId, value) => {
+    // Faqat raqamlar va bo'sh stringga ruxsat berish
+    if (value === "" || /^\d*\.?\d*$/.test(value)) {
+      setPrices((prev) => ({
+        ...prev,
+        [productId]: value,
+      }));
+    }
+  };
+
   const columns = [
     {
       field: "check",
@@ -61,7 +91,14 @@ export default function EventDetail() {
     { field: "status", headerName: "Status" },
     { field: "event", headerName: "Yuk xati" },
     { field: "type", headerName: "Mahsulot turi" },
-    { field: "actions", headerName: "Sozlash" },
+    {
+      field: "actions",
+      headerName: pricesSubmitted
+        ? "Sozlash"
+        : chandeStatusData?.status
+        ? "Narxi"
+        : "Sozlash",
+    },
   ];
 
   const handleEditDesc = async () => {
@@ -72,30 +109,120 @@ export default function EventDetail() {
           const res = await $api.patch(`/events/update/${params.id}`, {
             description: updateDesc,
           });
-          console.log(res);
 
           if (res.status === 200) {
             setIsEdit(false);
             setDescription(updateDesc);
+            notification("Muvaffaqiyatli o'zgartirildi", "success");
           }
         } catch (error) {
-          notification(error.response?.data?.message);
+          notification(error.response?.data?.message || "Xatolik yuz berdi");
         }
       }
     } else {
       setIsEdit(true);
     }
   };
+
   const handleStatusChange = (e) => {
     setSelectedStatus(e.target.value);
     if (e.target.value && items.length > 0) {
       setSelectedProduct({
-        id: items[0], // Birinchi tanlangan mahsulot IDsi
-        statusProduct: { product_status: "Saqlovda" }, // Misol uchun
+        id: items[0],
+        statusProduct: { product_status: "Saqlovda" },
       });
       setModalOpen(true);
     }
   };
+
+  const handleSubmitPrices = async () => {
+  if (!chandeStatusData || !allPricesEntered()) return;
+
+  setIsSubmitting(true);
+  let hasError = false;
+  let globalError = false;
+
+  try {
+    const requests = items.map(async (productId) => {
+      try {
+        const price = prices[productId] || "0";
+        const formData = new FormData();
+
+        formData.set("discount_price", JSON.stringify([{ price, date: null }]));
+        formData.set("productId", productId);
+        formData.set("sales_document", chandeStatusData.commonData.fileData);
+        formData.set("mibId", chandeStatusData.commonData.mibId);
+        formData.set(
+          "mib_dalolatnoma",
+          chandeStatusData.commonData.mib_dalolatnoma
+        );
+        formData.set("sudId", chandeStatusData.commonData.sudId);
+        formData.set(
+          "sud_dalolatnoma",
+          chandeStatusData.commonData.sud_dalolatnoma
+        );
+        formData.set("sud_date", chandeStatusData.commonData.sud_date);
+
+        const response = await $api.post("/sales/products/create", formData);
+        return response;
+      } catch (error) {
+        hasError = true;
+        notification(
+          `Mahsulot ID ${productId} uchun xatolik: ${
+            error.response?.data?.message || "Noma'lum xatolik"
+          }`,
+          "error"
+        );
+        return null;
+      }
+    });
+
+    await Promise.all(requests);
+
+    if (hasError) {
+      notification(
+        "Ba'zi mahsulotlar uchun narxlarni saqlashda xatolik yuz berdi",
+        "error"
+      );
+    } else {
+      notification(
+        "Barcha mahsulotlar uchun narxlar muvaffaqiyatli saqlandi",
+        "success"
+      );
+      setChangeStatusData();
+      setPrices({});
+      clearItems();
+      setPricesSubmitted(true);
+
+      // Ma'lumotlarni yangilash
+      const res = await $api.get(
+        `/events/products/by/${params.id}?page=${page + 1}&limit=${rowsPerPage}`
+      );
+      console.log(res);
+      
+      setData(res.data.data.products);
+      setTotal(res.data.data.total);
+    }
+  } catch (error) {
+    // Faqat tarmoq yoki serverdagi global xatoliklar uchun
+    globalError = true;
+    notification(
+      "Umumiy xatolik yuz berdi: " +
+        (error.response?.data?.message || "Noma'lum xatolik"),
+      "error"
+    );
+  } finally {
+    setIsSubmitting(false);
+    
+    // Agar global xatolik bo'lsa va mahsulot darajasidagi xatoliklar bo'lmasa
+    if (globalError && !hasError) {
+      notification(
+        "Narxlarni saqlash jarayonida tizim xatosi yuz berdi",
+        "error"
+      );
+    }
+  }
+};
 
   useEffect(() => {
     const getAllEvents = async (page = 1, limit = 10) => {
@@ -173,12 +300,24 @@ export default function EventDetail() {
     ...row,
     actions: (
       <div className="flex items-center gap-4">
-        <button
-          className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-400 cursor-pointer"
-          onClick={() => nextButton(row)}
-        >
-          <ArrowRightFromLine size={16} />
-        </button>
+        {!pricesSubmitted && chandeStatusData?.status ? (
+          <input
+            type="text"
+            className={`border p-2 outline-none w-24 ${
+              !prices[row.id] ? "border-red-500" : "border-gray-400"
+            }`}
+            placeholder="narxi"
+            value={prices[row.id] || ""}
+            onChange={(e) => handlePriceChange(row.id, e.target.value)}
+          />
+        ) : (
+          <button
+            className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-400 cursor-pointer"
+            onClick={() => nextButton(row)}
+          >
+            <ArrowRightFromLine size={16} />
+          </button>
+        )}
       </div>
     ),
   }));
@@ -203,20 +342,39 @@ export default function EventDetail() {
                 <p className="text-sm text-gray-600 w-[180px]">
                   Tanlanganlar: {items.length}
                 </p>
-                <select
-                  onChange={handleStatusChange}
-                  value={selectedStatus}
-                  className="ml-2 block appearance-none w-full bg-white border border-gray-300 text-gray-700 py-2 px-3 pr-8 rounded leading-tight focus:outline-none focus:ring focus:border-[#249B73]"
-                >
-                  <option hidden value="">
-                    Statusni o'zgartirish
-                  </option>
-                  {status.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.product_status}
+                {chandeStatusData?.status ? (
+                  <button
+                    className={`px-6 py-2 text-white rounded-sm cursor-pointer flex items-center gap-2 ${
+                      allPricesEntered() ? "bg-[#249B73]" : "bg-gray-400"
+                    }`}
+                    onClick={handleSubmitPrices}
+                    disabled={isSubmitting || !allPricesEntered()}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <CircularProgress size={20} color="inherit" />
+                        Saqlanmoqda...
+                      </>
+                    ) : (
+                      "Saqlash"
+                    )}
+                  </button>
+                ) : (
+                  <select
+                    onChange={handleStatusChange}
+                    value={selectedStatus}
+                    className="ml-2 block appearance-none w-full bg-white border border-gray-300 text-gray-700 py-2 px-3 pr-8 rounded leading-tight focus:outline-none focus:ring focus:border-[#249B73]"
+                  >
+                    <option hidden value="">
+                      Statusni o'zgartirish
                     </option>
-                  ))}
-                </select>
+                    {status.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.product_status}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </>
             )}
           </div>
@@ -281,6 +439,8 @@ export default function EventDetail() {
               key={item}
               className="flex items-center mt-8 gap-3 text-white bg-[#249B73] w-fit px-5 py-2 rounded-md"
               href={`${import.meta.env.VITE_BASE_URL}/${item}`}
+              target="_blank"
+              rel="noopener noreferrer"
             >
               <Download />
               <span>File ni yuklab olish</span>
@@ -298,7 +458,10 @@ export default function EventDetail() {
               product={selectedProduct}
               status={selectedStatus}
               eventId={params.id}
-              onClose={() => setModalOpen(false)}
+              onClose={() => {
+                setModalOpen(false);
+                setSelectedStatus("");
+              }}
             />
           </div>
         </div>

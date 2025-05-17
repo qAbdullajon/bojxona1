@@ -167,10 +167,10 @@ export default function ProductModal() {
         setHasMoreChildTypes(false);
       }
     } catch (error) {
-      notification(
+      return notification(
         error.response?.data?.message || "Child turlarni yuklashda xatolik"
       );
-      return;
+      
     } finally {
       setChildTypeLoading(false);
     }

@@ -4,7 +4,7 @@ import $api from "../../http/api";
 import { format } from "date-fns";
 import { ArrowRightFromLine, Check, CircleCheck } from "lucide-react";
 import NoData from "../../assets/no-data.png";
-import { Box, Dialog, Typography } from "@mui/material";
+import { Box, Dialog, Typography, Checkbox } from "@mui/material";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useProductStore } from "../../hooks/useModalState";
 import { notification } from "../../components/notification";
@@ -17,43 +17,125 @@ export default function PandingProducts() {
   const search = searchParams.get("search");
   const [open, setOpen] = useState(false);
   const [product, setProduct] = useState(null);
-  const navigation = useNavigate();
   const navigate = useNavigate();
   const [pagination, setPagination] = useState({
     page: 0,
     rowsPerPage: 10,
     currentPage: 1,
   });
+  const [selectedProducts, setSelectedProducts] = useState([]); // Tanlangan mahsulotlar
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false); // Bir nechta tasdiqlash dialogi
 
+  // Checkbox uchun column qo'shamiz
   const columns = [
+    {
+      field: "checkbox",
+      headerName: (
+        <Checkbox
+          checked={selectedProducts.length === data.length && data.length > 0}
+          indeterminate={
+            selectedProducts.length > 0 && selectedProducts.length < data.length
+          }
+          onChange={(e) => handleSelectAll(e)}
+        />
+      ),
+      width: 50,
+    },
     { field: "id", headerName: "№" },
     { field: "name", headerName: "Mahsulot nomi" },
     { field: "price", headerName: "Narxi" },
-    { field: "createdAt", headerName: "Qo‘shilgan sana" },
+    { field: "createdAt", headerName: "Qo'shilgan sana" },
     { field: "action", headerName: "Tasdiqlash" },
   ];
-  const onClose = () => {
-    setProduct(null);
-    setOpen(false);
+
+  // Barchasini tanlash/olib tashlash
+  const handleSelectAll = (event) => {
+    if (event.target.checked) {
+      setSelectedProducts(data.map((item) => item.id));
+    } else {
+      setSelectedProducts([]);
+    }
   };
-  const onOpen = (row) => {
-    setOpen(true);
-    setProduct(row);
-    createData({ ...row, statusProduct: {product_status: "Saqlovda"} });
+
+  // Bitta mahsulotni tanlash/olib tashlash
+  const handleSelectProduct = (productId) => {
+    setSelectedProducts((prev) =>
+      prev.includes(productId)
+        ? prev.filter((id) => id !== productId)
+        : [...prev, productId]
+    );
   };
+
+  // Bir nechta mahsulotlarni tasdiqlash
+  const bulkUpdateAccess = async () => {
+    try {
+      const requests = selectedProducts.map((productId) =>
+        $api.patch(`products/update/${productId}`, {
+          statusId: "01f8dafe-c399-4d04-9814-31b572e95f0d",
+          access_product: true,
+        })
+      );
+
+      await Promise.all(requests);
+      notification(
+        `${selectedProducts.length} ta mahsulot muvaffaqiyatli tasdiqlandi`,
+        "success"
+      );
+      setSelectedProducts([]);
+      setBulkConfirmOpen(false);
+      
+      // Ma'lumotlarni yangilash
+      const res = await $api.get("/products/get/access?access_product=false", {
+        params: {
+          page: pagination.currentPage,
+          limit: pagination.rowsPerPage,
+          search: search,
+        },
+      });
+      setData(res.data.productData);
+      setTotal(res.data.total);
+    } catch (error) {
+      notification(error.response?.data?.message || "Xatolik yuz berdi");
+    }
+  };
+
+  // Bitta mahsulotni tasdiqlash (oldingi funksiya)
+  const updateAccess = async () => {
+    try {
+      const res = await $api.patch(`products/update/${product.id}`, {
+        statusId: "01f8dafe-c399-4d04-9814-31b572e95f0d",
+        access_product: true,
+      });
+      if (res.status === 200) {
+        setOpen(false);
+        notification("Mahsulot muvaffaqiyatli tasdiqlandi", "success");
+        
+        // Ma'lumotlarni yangilash
+        const res = await $api.get("/products/get/access?access_product=false", {
+          params: {
+            page: pagination.currentPage,
+            limit: pagination.rowsPerPage,
+            search: search,
+          },
+        });
+        setData(res.data.productData);
+        setTotal(res.data.total);
+      }
+    } catch (error) {
+      notification(error.response?.data?.message);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await $api.get(
-          "/products/get/access?access_product=false",
-          {
-            params: {
-              page: pagination.currentPage,
-              limit: pagination.rowsPerPage,
-              search: search,
-            },
-          }
-        );
+        const res = await $api.get("/products/get/access?access_product=false", {
+          params: {
+            page: pagination.currentPage,
+            limit: pagination.rowsPerPage,
+            search: search,
+          },
+        });
         setData(res.data.productData);
         setTotal(res.data.total);
       } catch (error) {
@@ -64,24 +146,26 @@ export default function PandingProducts() {
     fetchData();
   }, [pagination.currentPage, pagination.rowsPerPage, search]);
 
-  const updateAccess = async () => {
-    try {
-      const res = await $api.patch(`products/update/${product.id}`, {
-        statusId: "01f8dafe-c399-4d04-9814-31b572e95f0d",
-        access_product: true,
-      });
-      if (res.status === 200) {
-        setOpen(false);
-        navigation("/maxsulotlar");
-      }
-    } catch (error) {
-      notification(error.response?.data?.message)
-    }
+  const onClose = () => {
+    setProduct(null);
+    setOpen(false);
+  };
+
+  const onOpen = (row) => {
+    setOpen(true);
+    setProduct(row);
+    createData({ ...row, statusProduct: { product_status: "Saqlovda" } });
   };
 
   const formattedRows = data.map((row, index) => ({
     ...row,
     id: index + 1,
+    checkbox: (
+      <Checkbox
+        checked={selectedProducts.includes(row.id)}
+        onChange={() => handleSelectProduct(row.id)}
+      />
+    ),
     createdAt: format(new Date(row.createdAt), "dd-MM-yyyy"),
     action: (
       <div className="flex gap-4">
@@ -119,6 +203,19 @@ export default function PandingProducts() {
 
   return (
     <div className="p-4">
+      {/* Bir nechta tasdiqlash tugmasi */}
+      {selectedProducts.length > 0 && (
+        <div className="mb-4 flex justify-between items-center">
+          <span>Tanlanganlar: {selectedProducts.length}</span>
+          <button
+            onClick={() => setBulkConfirmOpen(true)}
+            className="bg-green-500 text-white px-4 py-2 rounded"
+          >
+            Tasdiqlash ({selectedProducts.length})
+          </button>
+        </div>
+      )}
+
       {total === 0 ? (
         <Box textAlign="center" py={10}>
           <Box
@@ -143,18 +240,34 @@ export default function PandingProducts() {
         />
       )}
 
+      {/* Bitta mahsulotni tasdiqlash dialogi */}
       <Dialog open={open} onClose={onClose}>
         <div className="w-[400px] flex flex-col items-center p-4">
           <CircleCheck size={48} color="green" />
           <p className="text-center text-2xl pt-4">
             Siz mahsulotni tasdiqlamochimisiz?
           </p>
-
           <button
             onClick={updateAccess}
             className="w-full bg-[green] text-white py-2 rounded-md mt-4 cursor-pointer"
           >
             Ha
+          </button>
+        </div>
+      </Dialog>
+
+      {/* Bir nechta mahsulotlarni tasdiqlash dialogi */}
+      <Dialog open={bulkConfirmOpen} onClose={() => setBulkConfirmOpen(false)}>
+        <div className="w-[400px] flex flex-col items-center p-4">
+          <CircleCheck size={48} color="green" />
+          <p className="text-center text-2xl pt-4">
+            {selectedProducts.length} ta mahsulotni tasdiqlamochimisiz?
+          </p>
+          <button
+            onClick={bulkUpdateAccess}
+            className="w-full bg-[green] text-white py-2 rounded-md mt-4 cursor-pointer"
+          >
+            Ha, Tasdiqlash
           </button>
         </div>
       </Dialog>

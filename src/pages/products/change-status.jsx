@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { X, Upload, FileText, Trash2, Video, CircleCheck } from "lucide-react";
-import { Dialog } from "@mui/material";
+import { Dialog, DialogContent } from "@mui/material"; // Added DialogContent import
 import $api from "../../http/api";
 import { Statuses } from "../../utils";
 import { notification } from "../../components/notification";
 import { useCheckedStore } from "../../hooks/useCheckedStore";
+import { useProductStore } from "../../hooks/useModalState";
 
 const FileUploader = ({
   file,
@@ -59,7 +60,12 @@ const FileUploader = ({
                 >
                   <Upload size={16} />
                 </button>
-                <input type="file" className="hidden" onChange={onChange} />
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  onChange={onChange}
+                  accept={accept} // Added accept prop for consistency
+                />
               </label>
               <button
                 type="button"
@@ -107,11 +113,13 @@ const VideoUploader = ({
   return (
     <div className="border border-gray-300 rounded-lg overflow-hidden">
       <div className="relative pt-[56.25%] bg-black">
-        <video
-          src={videoPreview}
-          controls
-          className="absolute top-0 left-0 w-full h-full"
-        />
+        {videoPreview && (
+          <video
+            src={videoPreview}
+            controls
+            className="absolute top-0 left-0 w-full h-full"
+          />
+        )}
       </div>
       <div className="p-3 border-t border-gray-300">
         <div className="flex justify-between items-center">
@@ -134,7 +142,12 @@ const VideoUploader = ({
               >
                 <Upload size={16} />
               </button>
-              <input type="file" className="hidden" onChange={onChange} />
+              <input 
+                type="file" 
+                className="hidden" 
+                onChange={onChange}
+                accept="video/mp4,video/quicktime" // Added accept prop for consistency
+              />
             </label>
             <button
               type="button"
@@ -193,7 +206,7 @@ const FormSelect = ({
       <option hidden value="">
         Tanlang
       </option>
-      {options.map((item) => (
+      {options?.map((item) => (
         <option key={item?.id} value={item?.id}>
           {item?.name}
         </option>
@@ -232,7 +245,9 @@ export default function ChangeStatus({ product, status, onClose, eventId }) {
   const [selectedMib, setSelectedMib] = useState("");
   const [selectedSud, setSelectedSud] = useState("");
   const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { items } = useCheckedStore();
+  const { setChangeStatusData } = useProductStore();
 
   const fetchData = useCallback(async () => {
     try {
@@ -240,10 +255,11 @@ export default function ChangeStatus({ product, status, onClose, eventId }) {
         $api.get("/mib/all"),
         $api.get("/sud/all"),
       ]);
-      setMibsOptions(mibsRes.data.mibs);
-      setSudsOptions(sudsRes.data.mibs);
+      setMibsOptions(mibsRes.data.mibs || []);
+      setSudsOptions(sudsRes.data.mibs || []);
     } catch (error) {
       console.error("Fetch error:", error);
+      notification("Ma'lumotlarni yuklashda xatolik yuz berdi");
     }
   }, []);
 
@@ -252,23 +268,23 @@ export default function ChangeStatus({ product, status, onClose, eventId }) {
   }, [fetchData]);
 
   const handleFileChange = useCallback((e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
 
-    const maxSize = e.target.accept.includes("video") ? 50 : 10;
-    // const sizeUnit = e.target.accept.includes("video") ? "MB" : "MB";
+    const isVideo = e.target.accept.includes("video");
+    const maxSize = isVideo ? 50 : 10;
 
     if (file.size > maxSize * 1024 * 1024) {
-      alert(`Fayl hajmi ${maxSize}MB dan katta`);
+      notification(`Fayl hajmi ${maxSize}MB dan katta`, "error");
       return;
     }
 
-    if (e.target.accept.includes("video") && !file.type.includes("video/")) {
-      alert("Faqat video fayllarni yuklashingiz mumkin");
+    if (isVideo && !file.type.includes("video/")) {
+      notification("Faqat video fayllarni yuklashingiz mumkin", "error");
       return;
     }
 
-    if (e.target.accept.includes("video")) {
+    if (isVideo) {
       setVideoFile(file);
       setVideoName(file.name);
       const reader = new FileReader();
@@ -299,45 +315,68 @@ export default function ChangeStatus({ product, status, onClose, eventId }) {
     setSelectedSud(e.target.value);
   }, []);
 
+  const getFormValues = useCallback((form) => {
+    const formData = new FormData(form);
+    const values = {};
+    
+    formData.forEach((value, key) => {
+      values[key] = { value };
+    });
+    
+    return values;
+  }, []);
+
   const prepareFormData = useCallback(
     (productId, formValues) => {
       const data = new FormData();
       const commonFields = {
         productId,
-        mib_dalolatnoma: formValues.mib_dalolatnoma.value,
-        sud_dalolatnoma: formValues.sud_dalolatnoma.value,
-        sud_date: formValues.sud_date.value,
+        mib_dalolatnoma: formValues.mib_dalolatnoma?.value || "",
+        sud_dalolatnoma: formValues.sud_dalolatnoma?.value || "",
+        sud_date: formValues.sud_date?.value || "",
         mibId: selectedMib,
         sudId: selectedSud,
       };
 
+      // Add status ID for all status types
+      data.append("statusId", status);
+
       switch (status) {
-        case "d395b9e9-c9f4-4bf3-a1b5-7dbfa1bb0783":
+        case "d395b9e9-c9f4-4bf3-a1b5-7dbfa1bb0783": // Sales status
           data.append(
             "discount_price",
             JSON.stringify([
-              { price: formValues.discount_price.value, date: null },
+              { price: formValues.discount_price?.value || 0, date: null },
             ])
           );
-          data.append("sales_document", fileData);
+          if (fileData) {
+            data.append("sales_document", fileData);
+          }
           break;
-        case "ed207621-3867-4530-8886-0fa434dedc19":
+        case "ed207621-3867-4530-8886-0fa434dedc19": // Destruction status
           data.append(
             "destroyed_institution",
-            formValues.document_title?.value
+            formValues.document_title?.value || ""
           );
-          data.append("document_img", fileData);
-          data.append("date_destroyed", "2025-05-30");
-          data.append("video_destroyed", videoFile);
+          if (fileData) {
+            data.append("document_img", fileData);
+          }
+          data.append("date_destroyed", formValues.sud_date?.value || "2025-05-30");
+          if (videoFile) {
+            data.append("video_destroyed", videoFile);
+          }
           break;
-        default:
-          data.append("document_title", formValues.document_title?.value);
-          data.append("statusId", status);
-          data.append("document_img", fileData);
+        default: // Other status types
+          data.append("document_title", formValues.document_title?.value || "");
+          if (fileData) {
+            data.append("document_img", fileData);
+          }
       }
 
       Object.entries(commonFields).forEach(([key, value]) => {
-        if (value !== undefined) data.append(key, value);
+        if (value !== undefined && value !== "") {
+          data.append(key, value);
+        }
       });
 
       return data;
@@ -348,18 +387,30 @@ export default function ChangeStatus({ product, status, onClose, eventId }) {
   const handleSubmit = useCallback(
     async (e) => {
       e.preventDefault();
+      
+      // Input validation
       if (!selectedMib || !selectedSud || !fileData) {
         notification(
           !selectedMib
-            ? "Mibni kiriting"
+            ? "MIBni tanlang"
             : !selectedSud
-            ? "Sudni kiriting"
-            : "Faylni kiriting"
+            ? "SUDni tanlang"
+            : "Faylni yuklang",
+          "error"
         );
         return;
       }
+
+      setIsSubmitting(true);
+
       try {
-        const productIds = items.length > 0 ? items : [product.id];
+        const productIds = items.length > 0 ? items : [product?.id];
+        if (!productIds || productIds.length === 0) {
+          throw new Error("Mahsulot tanlanmagan");
+        }
+        
+        const formValues = getFormValues(e.target);
+        
         const endpointMap = {
           "d395b9e9-c9f4-4bf3-a1b5-7dbfa1bb0783": "/sales/products/create",
           "ed207621-3867-4530-8886-0fa434dedc19": "/destroyes/create",
@@ -367,33 +418,63 @@ export default function ChangeStatus({ product, status, onClose, eventId }) {
         };
 
         const endpoint = endpointMap[status] || endpointMap.default;
-        
-        // if(status ===)
-        for (const productId of productIds) {
-          const data = prepareFormData(productId, e.target);
-          await $api.post(endpoint, data);
-        }
 
-        setOpen(true);
-        notification(
-          items.length > 0
-            ? "Barcha tanlangan mahsulotlar uchun status muvaffaqiyatli o'zgartirildi"
-            : "Status muvaffaqiyatli o'zgartirildi",
-          "success"
-        );
+        if (status === "d395b9e9-c9f4-4bf3-a1b5-7dbfa1bb0783") {
+          // For sales status, we prepare the data and pass it to parent
+          const productsData = productIds.map(productId => ({
+            productId,
+            formData: prepareFormData(productId, formValues)
+          }));
+
+          setChangeStatusData({
+            commonData: {
+              mib_dalolatnoma: formValues.mib_dalolatnoma?.value || "",
+              sud_dalolatnoma: formValues.sud_dalolatnoma?.value || "",
+              sud_date: formValues.sud_date?.value || "",
+              mibId: selectedMib,
+              sudId: selectedSud,
+              fileData,
+            },
+            productsData,
+            status
+          });
+          
+          // notification("Mahsulotlar sotuvga chiqarish uchun tayyorlandi", "success");
+          onClose();
+        } else {
+          // For other status types, we send requests to the server
+          for (const productId of productIds) {
+            const data = prepareFormData(productId, formValues);
+            await $api.post(endpoint, data);
+          }
+          
+          setOpen(true);
+          notification(
+            items.length > 0
+              ? "Barcha tanlangan mahsulotlar uchun status muvaffaqiyatli o'zgartirildi"
+              : "Status muvaffaqiyatli o'zgartirildi",
+            "success"
+          );
+        }
       } catch (error) {
-        notification(error.response?.data?.message || "Xatolik yuz berdi");
+        console.error("Submit error:", error);
+        notification(error.response?.data?.message || "Xatolik yuz berdi", "error");
+      } finally {
+        setIsSubmitting(false);
       }
     },
     [
       fileData,
+      fileName,
+      getFormValues,
       items,
+      onClose,
       prepareFormData,
-      product.id,
+      product?.id,
       selectedMib,
       selectedSud,
+      setChangeStatusData,
       status,
-      videoFile,
     ]
   );
 
@@ -453,18 +534,7 @@ export default function ChangeStatus({ product, status, onClose, eventId }) {
     if (status === "d395b9e9-c9f4-4bf3-a1b5-7dbfa1bb0783") {
       return (
         <div className="space-y-4">
-          <FormInput
-            label="Narxni belgilash"
-            id="discount_price"
-            name="discount_price"
-            type="text"
-            pattern="[0-9\-\/#]*"
-            onInput={(e) => {
-              e.target.value = e.target.value.replace(/[^0-9\-/#]/g, "");
-            }}
-            placeholder="2 000 so'm"
-            required
-          />
+          
           {commonInputs}
           <FileUploader
             file={fileData}
@@ -533,6 +603,11 @@ export default function ChangeStatus({ product, status, onClose, eventId }) {
     videoPreview,
   ]);
 
+  // Check if product exists to avoid potential issues
+  if (!product || !product.id) {
+    return <div className="p-6 text-center">Mahsulot ma'lumotlari topilmadi</div>;
+  }
+
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-lg p-6">
       <div className="flex items-center justify-between mb-6">
@@ -552,28 +627,48 @@ export default function ChangeStatus({ product, status, onClose, eventId }) {
         <div className="flex justify-end gap-4 mt-4">
           <button
             type="submit"
-            className="px-6 py-2 bg-[#249B73] rounded-md text-white hover:bg-[#1d7a5a] transition-colors"
+            className={`px-6 py-2 bg-[#249B73] rounded-md text-white hover:bg-[#1d7a5a] transition-colors flex items-center justify-center min-w-[100px] ${
+              isSubmitting ? "opacity-75 cursor-not-allowed" : ""
+            }`}
+            disabled={isSubmitting}
           >
-            Saqlash
+            {isSubmitting ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Saqlanmoqda...
+              </>
+            ) : (
+              "Saqlash"
+            )}
           </button>
         </div>
       </div>
 
-      <Dialog open={open} onClose={() => setOpen(false)}>
-        <div className="w-[400px] flex flex-col items-center p-4">
-          <CircleCheck size={48} color="green" />
-          <p className="text-center text-2xl pt-4">
-            Mahsulotni statusni o'zgartirilsinmi?
-          </p>
-          <a
-            href={
-              eventId ? `/holatlar/${eventId}` : `/maxsulotlar/${product.id}`
-            }
-            className="w-full bg-[green] text-center text-white py-2 rounded-md mt-4 cursor-pointer"
-          >
-            Ha
-          </a>
-        </div>
+      <Dialog 
+        open={open} 
+        onClose={() => setOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogContent>
+          <div className="flex flex-col items-center p-4">
+            <CircleCheck size={48} className="text-green-500" />
+            <p className="text-center text-2xl pt-4">
+              Mahsulotni statusni o'zgartirilsinmi?
+            </p>
+            <a
+              href={
+                eventId ? `/holatlar/${eventId}` : `/maxsulotlar/${product.id}`
+              }
+              className="w-full bg-green-600 text-center text-white py-2 rounded-md mt-4 cursor-pointer"
+            >
+              Ha
+            </a>
+          </div>
+        </DialogContent>
       </Dialog>
     </form>
   );
