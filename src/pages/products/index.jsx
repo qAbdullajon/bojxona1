@@ -7,7 +7,7 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
-import { useEventStore, useProductStore } from "../../hooks/useModalState";
+import { useProductStore } from "../../hooks/useModalState";
 import { usePathStore } from "../../hooks/usePathStore";
 import $api from "../../http/api";
 import { Box, CircularProgress, Typography } from "@mui/material";
@@ -15,6 +15,7 @@ import NoData from "../../assets/no-data.png";
 import ProductModal from "../../modals/product-modal";
 import { getStatusStyle } from "../../utils/status";
 import IsAddProduct from "../../components/Add-product/IsAddProduct";
+import ConfirmationModal from "../../components/Add-product/IsAddProduct";
 
 export default function Products() {
   const { onOpen, data, setData, total, setTotal } = useProductStore();
@@ -22,10 +23,10 @@ export default function Products() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get("search");
-  const { toggleIsAddModal, setText, isOnSubmit, setIsOnSubmit, type, setType } =
-    useEventStore();
-  const [productId, setProductId] = useState(null);
-
+  const [confirm, setConfirm] = useState({
+    open: false,
+    id: null,
+  });
   const [pagination, setPagination] = useState({
     page: 0,
     rowsPerPage: 10,
@@ -45,24 +46,27 @@ export default function Products() {
     { field: "type", headerName: "Turi" },
     { field: "actions", headerName: "Amallar" },
   ];
-  const handleDelete = async (id) => {
-    setText("Mahsulotni rostan o'chirmoqchimisiz?");
-    toggleIsAddModal();
-    setType("product-detail")
-    setProductId(id)
-  };
-  useEffect(() => {
-    if (isOnSubmit && type === "product-detail") {
-      const productDeleted = async () => {
-        const res = await $api.delete(`products/delete/${productId}`);
-        if (res.status === 200) {
-          setData(data.filter((item) => item.id !== productId));
-          setIsOnSubmit(false);
-        }
-      };
-      productDeleted();
+  const handleDelete = async () => {
+    if (confirm.open) {
+      const res = await $api.delete(`products/delete/${confirm.id}`);
+      if (res.status === 200) {
+        setData(data.filter((item) => item.id !== confirm.id));
+        setConfirm((prev) => ({ ...prev, open: false }));
+      }
     }
-  }, [isOnSubmit]);
+  };
+  // useEffect(() => {
+  //   if (isOnSubmit && type === "product-detail") {
+  //     const productDeleted = async () => {
+  //       const res = await $api.delete(`products/delete/${productId}`);
+  //       if (res.status === 200) {
+  //         setData(data.filter((item) => item.id !== productId));
+  //         setIsOnSubmit(false);
+  //       }
+  //     };
+  //     productDeleted();
+  //   }
+  // }, [isOnSubmit]);
   useEffect(() => {
     const getAllProducts = async () => {
       try {
@@ -110,7 +114,7 @@ export default function Products() {
       <div className="flex items-center gap-2">
         <button
           className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-400 cursor-pointer"
-          onClick={() => handleDelete(row.id)}
+          onClick={() => setConfirm((prev) => ({ ...prev, open: true, id: row.id }))}
         >
           <Trash size={16} />
         </button>
@@ -222,6 +226,12 @@ export default function Products() {
 
       <ProductModal />
       <IsAddProduct />
+      <ConfirmationModal
+        isOpen={confirm.open}
+        onClose={() => setConfirm((prev) => ({ ...prev, open: false }))}
+        message={"Rostanham o'chirmoqchimisiz?"}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

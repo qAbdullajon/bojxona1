@@ -49,7 +49,6 @@ export default function WarehousesDetails() {
             },
           }
         );
-        console.log(res)
         if (res.status === 200) {
           setData(isSearchActive ? res.data.events : res.data.products);
           setTotal(res.data.totalItems);
@@ -64,7 +63,7 @@ export default function WarehousesDetails() {
     getDetails();
   }, [pagination.currentPage, pagination.rowsPerPage, searchQuery]);
 
-  console.log()
+  console.log();
 
   const formattedRows = data?.map((row, index) => {
     const createdAtRaw = isSearchActive
@@ -88,7 +87,9 @@ export default function WarehousesDetails() {
           {row.productStatuses?.map((status) => (
             <span
               key={status}
-              className={`mr-2 text-xs font-medium px-2 py-0.5 rounded-full ${getStatusStyle(status)}`}
+              className={`mr-2 text-xs font-medium px-2 py-0.5 rounded-full ${getStatusStyle(
+                status
+              )}`}
             >
               {status}
             </span>

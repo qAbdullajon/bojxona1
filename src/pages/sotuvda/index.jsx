@@ -87,7 +87,7 @@ export default function Sotuvda() {
   const rows = data.map((row, index) => ({
     id: index + 1 + pagination.page * pagination.rowsPerPage,
     name: row.name || "Noma’lum",
-    event_number: '#' + `${row.event_product.event_number}` || "Noma’lum",
+    event_number: '#' + `${row.event_product?.event_number}` || "Noma’lum",
     mib_region: row.sales_product[row.sales_product.length - 1]?.mib_sales_product?.name || "Yo'q",
     mib_number: row.sales_product[row.sales_product.length - 1]?.mib_dalolatnoma,
     sud_number: row.sales_product[row.sales_product.length - 1]?.sud_dalolatnoma || "Yo'q",

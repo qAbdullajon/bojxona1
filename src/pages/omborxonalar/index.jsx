@@ -4,7 +4,6 @@ import { toast, ToastContainer } from "react-toastify"; // Import ToastContainer
 import "react-toastify/dist/ReactToastify.css"; // Import toast styles
 import GlobalTable from "../../components/global-table";
 import $api from "../../http/api";
-import { format } from "date-fns";
 import NoData from "../../assets/no-data.png";
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { useWarehouseStore } from "../../hooks/useModalState";
@@ -58,7 +57,6 @@ export default function Omborxonalar() {
             search: searchQuery,
           },
         });
-        console.log(res)
         setData(res.data.warehouses);
         setTotal(res.data.totalItems);
       } catch (error) {
@@ -75,7 +73,7 @@ export default function Omborxonalar() {
     return {
       ...row,
       id: index + 1,
-      productsCount: row.events.length,
+      productsCount: row.eventsCount,
       createdAt: formatDate(new Date(row.createdAt), "dd-MM-yyyy"),
       actions: (
         <div className="flex items-center gap-3">

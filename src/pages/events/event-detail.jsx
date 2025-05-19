@@ -12,6 +12,7 @@ import { notification } from "../../components/notification";
 import { useCheckedStore } from "../../hooks/useCheckedStore";
 import ChangeStatus from "../products/change-status";
 import { useProductStore } from "../../hooks/useModalState";
+import ConfirmationModal from "../../components/Add-product/IsAddProduct";
 
 export default function EventDetail() {
   const [loading, setLoading] = useState(false);
@@ -38,6 +39,7 @@ export default function EventDetail() {
   const [prices, setPrices] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pricesSubmitted, setPricesSubmitted] = useState(false);
+  const [confirm, setConfirm] = useState(false);
 
   // Barcha tanlangan mahsulotlar uchun narxlar kiritilganligini tekshirish
   const allPricesEntered = () => {
@@ -103,21 +105,19 @@ export default function EventDetail() {
 
   const handleEditDesc = async () => {
     if (isEdit) {
-      const conf = confirm("Siz rostanham o'zgartirmoqchimisiz?");
-      if (conf) {
-        try {
-          const res = await $api.patch(`/events/update/${params.id}`, {
-            description: updateDesc,
-          });
+      try {
+        const res = await $api.patch(`/events/update/${params.id}`, {
+          description: updateDesc,
+        });
 
-          if (res.status === 200) {
-            setIsEdit(false);
-            setDescription(updateDesc);
-            notification("Muvaffaqiyatli o'zgartirildi", "success");
-          }
-        } catch (error) {
-          notification(error.response?.data?.message || "Xatolik yuz berdi");
+        if (res.status === 200) {
+          setIsEdit(false);
+          setDescription(updateDesc);
+          notification("Muvaffaqiyatli o'zgartirildi", "success");
+          setConfirm(false)
         }
+      } catch (error) {
+        notification(error.response?.data?.message || "Xatolik yuz berdi");
       }
     } else {
       setIsEdit(true);
@@ -136,93 +136,98 @@ export default function EventDetail() {
   };
 
   const handleSubmitPrices = async () => {
-  if (!chandeStatusData || !allPricesEntered()) return;
+    if (!chandeStatusData || !allPricesEntered()) return;
 
-  setIsSubmitting(true);
-  let hasError = false;
-  let globalError = false;
+    setIsSubmitting(true);
+    let hasError = false;
+    let globalError = false;
 
-  try {
-    const requests = items.map(async (productId) => {
-      try {
-        const price = prices[productId] || "0";
-        const formData = new FormData();
+    try {
+      const requests = items.map(async (productId) => {
+        try {
+          const price = prices[productId] || "0";
+          const formData = new FormData();
 
-        formData.set("discount_price", JSON.stringify([{ price, date: null }]));
-        formData.set("productId", productId);
-        formData.set("sales_document", chandeStatusData.commonData.fileData);
-        formData.set("mibId", chandeStatusData.commonData.mibId);
-        formData.set(
-          "mib_dalolatnoma",
-          chandeStatusData.commonData.mib_dalolatnoma
-        );
-        formData.set("sudId", chandeStatusData.commonData.sudId);
-        formData.set(
-          "sud_dalolatnoma",
-          chandeStatusData.commonData.sud_dalolatnoma
-        );
-        formData.set("sud_date", chandeStatusData.commonData.sud_date);
+          formData.set(
+            "discount_price",
+            JSON.stringify([{ price, date: null }])
+          );
+          formData.set("productId", productId);
+          formData.set("sales_document", chandeStatusData.commonData.fileData);
+          formData.set("mibId", chandeStatusData.commonData.mibId);
+          formData.set(
+            "mib_dalolatnoma",
+            chandeStatusData.commonData.mib_dalolatnoma
+          );
+          formData.set("sudId", chandeStatusData.commonData.sudId);
+          formData.set(
+            "sud_dalolatnoma",
+            chandeStatusData.commonData.sud_dalolatnoma
+          );
+          formData.set("sud_date", chandeStatusData.commonData.sud_date);
 
-        const response = await $api.post("/sales/products/create", formData);
-        return response;
-      } catch (error) {
-        hasError = true;
+          const response = await $api.post("/sales/products/create", formData);
+          return response;
+        } catch (error) {
+          hasError = true;
+          notification(
+            `Mahsulot ID ${productId} uchun xatolik: ${
+              error.response?.data?.message || "Noma'lum xatolik"
+            }`,
+            "error"
+          );
+          return null;
+        }
+      });
+
+      await Promise.all(requests);
+
+      if (hasError) {
         notification(
-          `Mahsulot ID ${productId} uchun xatolik: ${
-            error.response?.data?.message || "Noma'lum xatolik"
-          }`,
+          "Ba'zi mahsulotlar uchun narxlarni saqlashda xatolik yuz berdi",
           "error"
         );
-        return null;
+      } else {
+        notification(
+          "Barcha mahsulotlar uchun narxlar muvaffaqiyatli saqlandi",
+          "success"
+        );
+        setChangeStatusData();
+        setPrices({});
+        clearItems();
+        setPricesSubmitted(true);
+
+        // Ma'lumotlarni yangilash
+        const res = await $api.get(
+          `/events/products/by/${params.id}?page=${
+            page + 1
+          }&limit=${rowsPerPage}`
+        );
+        console.log(res);
+
+        setData(res.data.data.products);
+        setTotal(res.data.data.total);
       }
-    });
-
-    await Promise.all(requests);
-
-    if (hasError) {
+    } catch (error) {
+      // Faqat tarmoq yoki serverdagi global xatoliklar uchun
+      globalError = true;
       notification(
-        "Ba'zi mahsulotlar uchun narxlarni saqlashda xatolik yuz berdi",
+        "Umumiy xatolik yuz berdi: " +
+          (error.response?.data?.message || "Noma'lum xatolik"),
         "error"
       );
-    } else {
-      notification(
-        "Barcha mahsulotlar uchun narxlar muvaffaqiyatli saqlandi",
-        "success"
-      );
-      setChangeStatusData();
-      setPrices({});
-      clearItems();
-      setPricesSubmitted(true);
+    } finally {
+      setIsSubmitting(false);
 
-      // Ma'lumotlarni yangilash
-      const res = await $api.get(
-        `/events/products/by/${params.id}?page=${page + 1}&limit=${rowsPerPage}`
-      );
-      console.log(res);
-      
-      setData(res.data.data.products);
-      setTotal(res.data.data.total);
+      // Agar global xatolik bo'lsa va mahsulot darajasidagi xatoliklar bo'lmasa
+      if (globalError && !hasError) {
+        notification(
+          "Narxlarni saqlash jarayonida tizim xatosi yuz berdi",
+          "error"
+        );
+      }
     }
-  } catch (error) {
-    // Faqat tarmoq yoki serverdagi global xatoliklar uchun
-    globalError = true;
-    notification(
-      "Umumiy xatolik yuz berdi: " +
-        (error.response?.data?.message || "Noma'lum xatolik"),
-      "error"
-    );
-  } finally {
-    setIsSubmitting(false);
-    
-    // Agar global xatolik bo'lsa va mahsulot darajasidagi xatoliklar bo'lmasa
-    if (globalError && !hasError) {
-      notification(
-        "Narxlarni saqlash jarayonida tizim xatosi yuz berdi",
-        "error"
-      );
-    }
-  }
-};
+  };
 
   useEffect(() => {
     const getAllEvents = async (page = 1, limit = 10) => {
@@ -414,7 +419,7 @@ export default function EventDetail() {
           <div className="flex items-center justify-between">
             <p className="text-2xl">Yuk xati tarifi</p>
             <button
-              onClick={handleEditDesc}
+              onClick={() => (isEdit ? setConfirm(true) : setIsEdit(true))}
               className="w-10 h-10 border cursor-pointer border-gray-400 rounded-full flex items-center justify-center"
             >
               {isEdit ? <Check size={24} /> : <Pencil size={20} />}
@@ -466,6 +471,12 @@ export default function EventDetail() {
           </div>
         </div>
       )}
+      <ConfirmationModal
+        isOpen={confirm}
+        onClose={() => setConfirm(false)}
+        message={"Kommentariyani o‘zgartirmoqchimisiz?"}
+        onConfirm={handleEditDesc}
+      />
     </>
   );
 }

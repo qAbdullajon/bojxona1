@@ -4,6 +4,7 @@ import { Pencil, User, Lock, Bell, Shield, LogOut, Eye, X } from "lucide-react";
 import { formatDate } from "../../utils/dateChecker";
 import { useNavigate } from "react-router-dom";
 import { notification } from "../../components/notification";
+import ConfirmationModal from "../../components/Add-product/IsAddProduct";
 
 const Settings = () => {
   const [user, setUser] = useState(null);
@@ -11,6 +12,7 @@ const Settings = () => {
   const [formData, setFormData] = useState({});
   const [fileData, setFileData] = useState(null);
   const [open, setOpen] = useState(false);
+  const [confirm, setConfirm] = useState(false);
   const navigate = useNavigate();
   useEffect(() => {
     const fetchUser = async () => {
@@ -42,8 +44,7 @@ const Settings = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
   const handleLogout = async () => {
-    const isConfirm = confirm("Sahifadan chiqmochimisiz?");
-    if (isConfirm) {
+    if (confirm) {
       try {
         const res = await $api.post(`/auth/logout`);
         if (res.status === 200) {
@@ -77,14 +78,6 @@ const Settings = () => {
             Shaxsiy ma'lumotlar
           </TabButton>
 
-          {/* <TabButton
-            icon={<Lock size={18} />}
-            active={activeTab === "security"}
-            onClick={() => setActiveTab("security")}
-          >
-            Xavfsizlik
-          </TabButton> */}
-
           <TabButton
             icon={<Bell size={18} />}
             active={activeTab === "notifications"}
@@ -93,17 +86,9 @@ const Settings = () => {
             Bildirishnomalar
           </TabButton>
 
-          {/* <TabButton
-            icon={<Shield size={18} />}
-            active={activeTab === "privacy"}
-            onClick={() => setActiveTab("privacy")}
-          >
-            Maxfiylik
-          </TabButton> */}
-
           <div className="pt-4 mt-4 border-t border-gray-100">
             <button
-              onClick={handleLogout}
+              onClick={() => setConfirm(true)}
               className="flex items-center w-full px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
             >
               <LogOut size={18} className="mr-3" />
@@ -227,6 +212,13 @@ const Settings = () => {
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={confirm}
+        onClose={() => setConfirm(false)}
+        message={"Profiledan chiqmoqchimisiz?"}
+        onConfirm={handleLogout}
+      />
     </div>
   );
 };

@@ -1,9 +1,7 @@
 import { Box, Modal } from "@mui/material";
 import { X } from "lucide-react";
-import { useEventStore, useProductStore } from "../../hooks/useModalState";
-import { useNavigate } from "react-router-dom";
 
-const style = {
+const modalStyle = {
   position: "absolute",
   top: "30%",
   left: "50%",
@@ -15,46 +13,34 @@ const style = {
   py: 2,
 };
 
-export default function IsAddProduct() {
-  const { isAddModal, toggleIsAddModal, text, setIsOnSubmit, type } =
-    useEventStore();
-  const { onOpen } = useProductStore();
-  const navigate = useNavigate();
-
-  const handleClick = () => {
-    if (!isAddModal) {
-      onOpen();
-    }
-    if (type === "create-product") {
-      navigate("/maxsulotlar");
-      onOpen()
-    }
-    toggleIsAddModal();
-    setIsOnSubmit((prev) => !prev);
-    console.log(isAddModal);
-    
-  };
+export default function ConfirmationModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  message
+}) {
   return (
-    <Modal open={isAddModal} onClose={toggleIsAddModal}>
-      <Box sx={style}>
+    <Modal open={isOpen} onClose={onClose}>
+      <Box sx={modalStyle}>
         <div className="flex items-center justify-between pb-8">
-          <p className="text-xl uppercase">{text}</p>
+          <p className="text-xl uppercase">{message}</p>
           <button
-            onClick={toggleIsAddModal}
+            onClick={onClose}
             className="w-8 h-8 hover:bg-[#f4f1f1] cursor-pointer flex items-center justify-center"
           >
             <X />
           </button>
         </div>
+        
         <div className="flex gap-4 justify-end">
           <button
-            onClick={toggleIsAddModal}
+            onClick={onClose}
             className="text-gray-500 cursor-pointer border border-gray-500 px-5 py-1.5"
           >
             Yo'q
           </button>
           <button
-            onClick={handleClick}
+            onClick={onConfirm}
             className="text-white cursor-pointer w-[100px] bg-[#249B73] px-5 py-1.5"
           >
             Ha

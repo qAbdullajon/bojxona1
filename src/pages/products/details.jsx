@@ -4,6 +4,7 @@ import { format, isBefore } from "date-fns";
 import { useEffect, useState } from "react";
 import $api from "../../http/api";
 import { notification } from "../../components/notification";
+import ConfirmationModal from "../../components/Add-product/IsAddProduct";
 
 const InfoCard = ({
   title,
@@ -33,6 +34,7 @@ export const ProductDetails = ({ product }) => {
   const [desc, setDesc] = useState("");
   const [updateDesc, setUpdateDesc] = useState("");
   const [isEdit, setIsEdit] = useState(false);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (product) {
@@ -63,19 +65,17 @@ export const ProductDetails = ({ product }) => {
 
   const handleEditDesc = async () => {
     if (isEdit) {
-      const conf = confirm("Siz rostanham o'zgartirmoqchimisiz?");
-      if (conf) {
-        try {
-          const res = await $api.patch(`/products/update/${product.id}`, {
-            description: updateDesc,
-          });
-          if (res.status === 200) {
-            setIsEdit(false);
-            setDesc(updateDesc);
-          }
-        } catch (error) {
-          notification(error.response?.data?.message);
+      try {
+        const res = await $api.patch(`/products/update/${product.id}`, {
+          description: updateDesc,
+        });
+        if (res.status === 200) {
+          setIsEdit(false);
+          setDesc(updateDesc);
+          setOpen(false)
         }
+      } catch (error) {
+        notification(error.response?.data?.message);
       }
     } else {
       setIsEdit(true);
@@ -192,20 +192,6 @@ export const ProductDetails = ({ product }) => {
           </div>
         </div>
 
-        {/*<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-           <InfoCard title="MIB" value={mib_product?.name} /> */}
-        {/* <InfoCard
-            title="Tashuvchi"
-            value={shipper_product?.name}
-            icon={Truck}
-          /> 
-        </div>*/}
-
-        {/* <div className="mb-6 mt-4">
-          {/* Additional Information 
-          <InfoCard title="F.I.O Huquqbuzar" value={offender_full_name} />
-        </div> */}
-
         {sale_product_quantity !== 0 ? (
           <div className="mb-6 mt-4">
             {/* Additional Information */}
@@ -224,7 +210,7 @@ export const ProductDetails = ({ product }) => {
           <div className="flex items-center justify-between">
             <p className="text-2xl">Mahsulot tarifi</p>
             <button
-              onClick={handleEditDesc}
+              onClick={isEdit ? setOpen(true) : setIsEdit(true)}
               className="w-10 h-10 border cursor-pointer border-gray-400 rounded-full flex items-center justify-center"
             >
               {isEdit ? <Check size={24} /> : <Pencil size={20} />}
@@ -242,6 +228,13 @@ export const ProductDetails = ({ product }) => {
           )}
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        onConfirm={handleEditDesc}
+        message={"Kommentariyani o‘zgartirmoqchimisiz?"}
+      />
     </div>
   );
 };

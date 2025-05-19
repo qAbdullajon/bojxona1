@@ -34,8 +34,18 @@ const style = {
 };
 
 export default function EventsModal() {
-  const { open, onClose, createData, editData, updateState, toggleIsAddModal, setText, setType } =
-    useEventStore();
+  const {
+    open,
+    onClose,
+    createData,
+    editData,
+    updateState,
+    toggleIsAddModal,
+    setText,
+    setType,
+  } = useEventStore();
+  console.log(editData);
+  
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     event_number: editData?.event_number || "",
@@ -92,7 +102,6 @@ export default function EventsModal() {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
-
     const newImages = [];
     const newPreviews = [];
 
@@ -267,7 +276,10 @@ export default function EventsModal() {
       // Yangilash
       try {
         const updatedData = {
+          date: formData.date,
+          description: formData.description,
           event_number: formData.event_number,
+          shipperId: selectedShipper
         };
 
         const res = await $api.patch(
@@ -299,8 +311,8 @@ export default function EventsModal() {
           onClose();
           createData({ ...res.data.data, productsCount: 0 });
           notification("Muvaffaqiyatli yaratildi", "success");
-          setType("create-product")
-          setText("Mahsulot qo'shmoqchimisiz?")
+          setType("create-product");
+          setText("Mahsulot qo'shmoqchimisiz?");
           toggleIsAddModal();
         }
         resetForm();
@@ -468,43 +480,39 @@ export default function EventsModal() {
               />
             </div>
 
-            {!editData?.id && (
-              <CustomSelect
-                value={
-                  selectedShipper
-                    ? shippers.find((s) => s.id === selectedShipper)?.name
-                    : ""
-                }
-                placeholder="Topshiruvchi"
-                showDropdown={showShipperDropdown}
-                toggleDropdown={toggleShipperDropdown}
-                selectedItem={selectedShipper}
-                items={shippers}
-                loading={shipperLoading}
-                search={shipperSearch}
-                setSearch={setShipperSearch}
-                hasMore={false}
-                loadMore={() => {}}
-                onSelect={setSelectedShipper}
-                searchPlaceholder="Topshiruvchi qidirish"
+            <CustomSelect
+              value={
+                selectedShipper
+                  ? shippers.find((s) => s.id === selectedShipper)?.name
+                  : ""
+              }
+              placeholder="Topshiruvchi"
+              showDropdown={showShipperDropdown}
+              toggleDropdown={toggleShipperDropdown}
+              selectedItem={selectedShipper}
+              items={shippers}
+              loading={shipperLoading}
+              search={shipperSearch}
+              setSearch={setShipperSearch}
+              hasMore={false}
+              loadMore={() => {}}
+              onSelect={setSelectedShipper}
+              searchPlaceholder="Topshiruvchi qidirish"
+            />
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="date" className="text-sm text-gray-600">
+                Sana <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="date"
+                name="date"
+                type="date"
+                defaultValue={formData.date}
+                onChange={handleChange}
+                className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
+                required
               />
-            )}
-            {!editData?.id && (
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="date" className="text-sm text-gray-600">
-                  Sana <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="date"
-                  name="date"
-                  type="date"
-                  defaultValue={formData.date}
-                  onChange={handleChange}
-                  className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
-                  required
-                />
-              </div>
-            )}
+            </div>
             {/* File upload section */}
             {!editData?.id && (
               <div className="space-y-4">
@@ -573,21 +581,19 @@ export default function EventsModal() {
                 />
               </div>
             )}
-            {!editData?.id && (
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="description" className="text-sm text-gray-600">
-                  Yuk xati tavsifi
-                </label>
-                <textarea
-                  id="description"
-                  name="description"
-                  rows={3}
-                  defaultValue={formData.description}
-                  onChange={handleChange}
-                  className="w-full px-3 border border-gray-300 rounded-md focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
-                />
-              </div>
-            )}
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="description" className="text-sm text-gray-600">
+                Yuk xati tavsifi
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                rows={3}
+                defaultValue={formData.description}
+                onChange={handleChange}
+                className="w-full px-3 border border-gray-300 rounded-md focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
+              />
+            </div>
 
             {/* Holat file switch */}
             {!editData?.id && (

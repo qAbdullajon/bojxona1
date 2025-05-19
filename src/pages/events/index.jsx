@@ -12,6 +12,7 @@ import NoData from "../../assets/no-data.png";
 import { getStatusStyle } from "../../utils/status";
 import IsAddProduct from "../../components/Add-product/IsAddProduct";
 import { notification } from "../../components/notification";
+import ConfirmationModal from "../../components/Add-product/IsAddProduct";
 
 export default function Events() {
   const navigate = useNavigate();
@@ -23,9 +24,6 @@ export default function Events() {
     setTotal,
     setEditData,
     type,
-    setType,
-    toggleIsAddModal,
-    setText,
     isOnSubmit,
   } = useEventStore();
   const { setName } = usePathStore();
@@ -34,7 +32,7 @@ export default function Events() {
   const [loading, setLoading] = useState(true);
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get("search");
-  const [eventId, setEventId] = useState(null);
+  const [confirm, setConfirm] = useState({ open: false, id: null });
 
   useEffect(() => {
     const fetchData = async (page = 1, limit = 10) => {
@@ -46,7 +44,7 @@ export default function Events() {
           }?page=${page}&limit=${limit}&search=${searchQuery || ""}`
         );
         console.log(res);
-        
+
         setData(res.data.events || []);
         setTotal(res.data.total);
       } catch (error) {
@@ -97,29 +95,25 @@ export default function Events() {
     setEditData(row);
   };
 
-  const handleDelete = async (id) => {
-    setText("Yuk xatini o'chirmoqchimisiz?");
-    setEventId(id);
-    setType("event-delete");
-    toggleIsAddModal();
+  const handleDelete = async () => {
+    if (confirm.open) {
+      try {
+        const res = await $api.delete(`events/delete/${confirm.id}`);
+        if (res.status === 200) {
+          setData(data.filter((item) => item.id !== confirm.id));
+          setConfirm((prev) => ({ ...prev, open: false }));
+        }
+      } catch (error) {
+        notification(error?.response?.data?.message);
+      }
+    } else {
+      setConfirm((prev) => ({ ...prev, open: true }));
+    }
   };
 
   useEffect(() => {
-    console.log(type);
-    console.log(eventId);
-    
-    if (type === "event-delete" && eventId !== null) {
-      const eventDelete = async () => {
-        try {
-          const res = await $api.delete(`events/delete/${eventId}`);
-          console.log(res);
-          
-          setData(data.filter((item) => item.id !== eventId));
-          setEventId(null);
-        } catch (error) {
-          notification(error?.response?.data?.message);
-        }
-      };
+    if (type === "event-delete") {
+      const eventDelete = async () => {};
       eventDelete();
     }
   }, [isOnSubmit]);
@@ -133,7 +127,7 @@ export default function Events() {
     actions: (
       <div className="flex items-center gap-4">
         <button
-          onClick={() => handleDelete(row.id)}
+          onClick={() => setConfirm((prev) => ({ ...prev, open: true }))}
           className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-400 cursor-pointer"
         >
           <Trash size={16} />
@@ -179,7 +173,7 @@ export default function Events() {
       {loading ? (
         <div className="text-center text-gray-500">
           <CircularProgress color="success" />
-        </div> // ✅ loading holati
+        </div>
       ) : pageTotal === 0 ? (
         <Box textAlign="center" py={10}>
           <Box
@@ -206,6 +200,12 @@ export default function Events() {
 
       <IsAddProduct />
       <EventsModal />
+      <ConfirmationModal
+        isOpen={confirm.open}
+        onClose={() => setConfirm((prev) => ({ ...prev, open: false }))}
+        onConfirm={handleDelete}
+        message={"Siz yukxatini o'chirmoqchimisiz?"}
+      />
     </>
   );
 }
