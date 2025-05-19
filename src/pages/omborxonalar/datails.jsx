@@ -50,7 +50,9 @@ export default function WarehousesDetails() {
           }
         );
         if (res.status === 200) {
-          setData(isSearchActive ? res.data.events : res.data.products);
+          console.log(res.data);
+          
+          setData(isSearchActive ? res.data.events : res.data.events);
           setTotal(res.data.totalItems);
         }
       } catch (error) {
@@ -66,48 +68,53 @@ export default function WarehousesDetails() {
   console.log();
 
   const formattedRows = data?.map((row, index) => {
-    const createdAtRaw = isSearchActive
-      ? row?.createdAt
-      : row?.event_product?.createdAt;
-    const eventNumber = isSearchActive
-      ? row?.event_number
-      : row?.event_product?.event_number;
-    const eventId = isSearchActive ? row?.id : row?.event_product?.id;
+  const createdAtRaw = isSearchActive
+    ? row?.date
+    : row?.event?.date;
+    
+  const eventNumber = isSearchActive 
+    ? row?.event_number 
+    : row?.event?.event_number ?? "";
 
-    return {
-      ...row,
-      id: `#${index + 1}`,
-      createdAt: createdAtRaw
-        ? format(new Date(createdAtRaw), "dd-MM-yyyy")
-        : "Nomaʼlum sana",
-      event_number: eventNumber || "Nomaʼlum",
-      products_count: row.productsCount,
-      status: (
-        <div className="flex flex-wrap gap-1">
-          {row.productStatuses?.map((status) => (
-            <span
-              key={status}
-              className={`mr-2 text-xs font-medium px-2 py-0.5 rounded-full ${getStatusStyle(
-                status
-              )}`}
-            >
-              {status}
-            </span>
-          ))}
-        </div>
-      ),
-      actions: (
-        <div>
-          <Link
-            to={`/holatlar/${eventId}`}
-            className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-400 cursor-pointer"
+  const eventId = isSearchActive 
+    ? row?.id 
+    : row?.event_product?.id;
+
+  return {
+    ...row,
+    id: `#${index + 1}`,
+    createdAt: createdAtRaw
+      ? format(new Date(createdAtRaw), "dd-MM-yyyy")
+      : "Nomaʼlum sana",
+    event_number: eventNumber || "Nomaʼlum",
+    products_count: row.productsCount,
+    status: (
+      <div className="flex flex-wrap gap-1">
+        {row.productStatuses?.map((status) => (
+          <span
+            key={status}
+            className={`mr-2 text-xs font-medium px-2 py-0.5 rounded-full ${getStatusStyle(
+              status
+            )}`}
           >
-            <ArrowRightFromLine size={16} />
-          </Link>
-        </div>
-      ),
-    };
-  });
+            {status}
+          </span>
+        ))}
+      </div>
+    ),
+    actions: (
+      <div>
+        <Link
+          to={`/holatlar/${eventId}`}
+          className="w-7 h-7 flex items-center justify-center rounded-full border border-gray-400 cursor-pointer"
+        >
+          <ArrowRightFromLine size={16} />
+        </Link>
+      </div>
+    ),
+  };
+});
+
 
   const handlePageChange = (event, newPage) => {
     setPagination((prev) => ({
